@@ -1,0 +1,41 @@
+name: openOMSI Windows 7 Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-win7:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout openOMSI 0.1.1541
+        uses: actions/checkout@v4
+        with:
+          ref: c97872833b8179cf756af7d1d560597a2248f8c2
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Install Rust nightly
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Install Rust source
+        run: rustup component add rust-src --toolchain nightly
+
+      - name: Build openOMSI for Windows 7
+        run: cargo +nightly build --release --locked --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort -p omsi-app -p omsi-launcher-core
+
+      - name: Package executables
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path win7-package
+          Copy-Item target\x86_64-win7-windows-msvc\release\openomsi.exe win7-package\
+          Copy-Item target\x86_64-win7-windows-msvc\release\openomsi-launcher.exe win7-package\
+
+      - name: Upload Windows 7 build
+        uses: actions/upload-artifact@v4
+        with:
+          name: openOMSI-0.1.1541-Windows7-x64
+          path: win7-package
